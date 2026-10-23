@@ -1,0 +1,85 @@
+# ${DOCKERHUB_USERNAME} and ${IMAGE_TAG} are substituted by `envsubst` in the pipeline.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registration
+  namespace: cloud-native-app
+  labels:
+    app: registration
+spec:
+  replicas: 1            # keeps registrations in memory -> single replica (see README)
+  selector:
+    matchLabels:
+      app: registration
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: registration
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: registration
+          image: docker.io/${DOCKERHUB_USERNAME}/registration-service:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            - name: PORT
+              value: "5000"
+            - name: COURSE_SERVICE_URL
+              value: http://course:5001
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registration
+  namespace: cloud-native-app
+  labels:
+    app: registration
+spec:
+  type: NodePort          # reachable at <node-ip>:30080; use an Ingress/LoadBalancer in production
+  selector:
+    app: registration
+  ports:
+    - port: 5000
+      targetPort: 5000
+      nodePort: 30080

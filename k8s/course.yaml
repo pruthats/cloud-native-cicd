@@ -1,0 +1,83 @@
+# ${DOCKERHUB_USERNAME} and ${IMAGE_TAG} are substituted by `envsubst` in the pipeline
+# (see .github/workflows/ci-cd.yml and docs/SETUP.md).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: course
+  namespace: cloud-native-app
+  labels:
+    app: course
+spec:
+  replicas: 2            # stateless -> safe to scale out
+  selector:
+    matchLabels:
+      app: course
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: course
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: course
+          image: docker.io/${DOCKERHUB_USERNAME}/course-service:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5001
+          env:
+            - name: PORT
+              value: "5001"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp       # gunicorn worker heartbeat files
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: course            # same DNS name as in docker compose -> http://course:5001
+  namespace: cloud-native-app
+  labels:
+    app: course
+spec:
+  type: ClusterIP
+  selector:
+    app: course
+  ports:
+    - port: 5001
+      targetPort: 5001

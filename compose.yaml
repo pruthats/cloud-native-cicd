@@ -1,0 +1,25 @@
+services:
+  registration:
+    build: ./registration
+    image: registration-service:local
+    environment:
+      COURSE_SERVICE_URL: http://course:5001
+    ports:
+      - "5000:5000"
+    depends_on:
+      course:
+        condition: service_healthy
+    networks:
+      - network-1
+
+  course:
+    build: ./course
+    image: course-service:local
+    ports:
+      - "5001:5001"
+    networks:
+      - network-1
+
+networks:
+  network-1:
+    name: network-1

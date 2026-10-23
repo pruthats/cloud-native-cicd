@@ -1,0 +1,51 @@
+# Applied ONCE by a cluster admin (see docs/SETUP.md, section 6).
+# Creates a ServiceAccount that can only manage workloads inside the app namespace,
+# so the GitHub secret never contains cluster-admin credentials.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-actions-deployer
+  namespace: cloud-native-app
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-actions-deployer
+  namespace: cloud-native-app
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/portforward"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-actions-deployer
+  namespace: cloud-native-app
+subjects:
+  - kind: ServiceAccount
+    name: github-actions-deployer
+    namespace: cloud-native-app
+roleRef:
+  kind: Role
+  name: github-actions-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Long-lived token for the ServiceAccount (Kubernetes >= 1.24 no longer auto-creates one)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-actions-deployer-token
+  namespace: cloud-native-app
+  annotations:
+    kubernetes.io/service-account.name: github-actions-deployer
+type: kubernetes.io/service-account-token
