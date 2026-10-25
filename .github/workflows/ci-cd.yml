@@ -199,9 +199,17 @@ jobs:
           done
 
       - name: Wait for rollout
+        shell: bash
+        env:
+          K8S_NAMESPACE: cloud-native-app
         run: |
-          kubectl -n "$K8S_NAMESPACE" rollout status deployment/course --timeout=180s
-          kubectl -n "$K8S_NAMESPACE" rollout status deployment/registration --timeout=180s
+          set -euo pipefail
+
+          kubectl --context=ci -n "$K8S_NAMESPACE" \
+            rollout status deployment/course --timeout=180s
+
+          kubectl --context=ci -n "$K8S_NAMESPACE" \
+            rollout status deployment/registration --timeout=180s
 
       - name: Smoke test deployed app
         run: |
