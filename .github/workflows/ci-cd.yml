@@ -182,16 +182,20 @@ jobs:
           kubectl config current-context
 
       - name: Deploy Kubernetes manifests
+        shell: /bin/bash
         env:
           K8S_NAMESPACE: cloud-native-app
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           IMAGE_TAG: sha-${{ github.sha }}
         run: |
-          set -e
+          set -euo pipefail
+
           for f in k8s/course.yaml k8s/registration.yaml; do
             echo "Applying $f"
+
             envsubst '${DOCKERHUB_USERNAME} ${IMAGE_TAG}' < "$f" |
-              kubectl apply -n "$K8S_NAMESPACE" -f -
+              kubectl --context=ci \
+                apply -n "$K8S_NAMESPACE" -f -
           done
 
       - name: Wait for rollout
