@@ -45,6 +45,6 @@ echo "Verifying access..." >&2
 KUBECONFIG="$OUT" kubectl -n "$NS" get deploy >&2 || echo "(verification failed - is the API server reachable from here?)" >&2
 
 echo "----- BASE64 (paste into the KUBE_CONFIG secret) -----" >&2
-base64 -w0 "$OUT" 2>/dev/null || base64 "$OUT" | tr -d '\n'
+cat "$OUT" | base64 | tr -d '\r\n'
 echo
 rm -f "$OUT"

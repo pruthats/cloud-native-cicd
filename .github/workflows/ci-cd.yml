@@ -151,7 +151,7 @@ jobs:
     # Runs only on pushes to main AND once the repository variable DEPLOY_ENABLED is "true"
     # (Settings > Secrets and variables > Actions > Variables). See docs/SETUP.md.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
       name: production          # add required reviewers here for a manual approval gate
     env:
