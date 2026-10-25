@@ -175,13 +175,23 @@ jobs:
       - name: Set image tag (immutable commit SHA)
         run: echo "IMAGE_TAG=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
+      - name: Debug Kubernetes configuration
+        run: |
+          echo "KUBECONFIG=${KUBECONFIG:-not-set}"
+          kubectl config get-contexts
+          kubectl config current-context
+
       - name: Deploy Kubernetes manifests
         env:
+          K8S_NAMESPACE: cloud-native-app
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           IMAGE_TAG: sha-${{ github.sha }}
         run: |
+          set -e
           for f in k8s/course.yaml k8s/registration.yaml; do
-            envsubst '${DOCKERHUB_USERNAME} ${IMAGE_TAG}' < "$f" | kubectl apply -n cloud-native-app -f -
+            echo "Applying $f"
+            envsubst '${DOCKERHUB_USERNAME} ${IMAGE_TAG}' < "$f" |
+              kubectl apply -n "$K8S_NAMESPACE" -f -
           done
 
       - name: Wait for rollout
