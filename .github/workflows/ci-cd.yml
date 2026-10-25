@@ -211,10 +211,27 @@ jobs:
           kubectl --context=ci -n "$K8S_NAMESPACE" \
             rollout status deployment/registration --timeout=180s
 
+
       - name: Smoke test deployed app
+        shell: bash
+        env:
+          K8S_NAMESPACE: cloud-native-app
         run: |
-          kubectl -n "$K8S_NAMESPACE" port-forward svc/registration 5000:5000 &
-          sleep 5
+          set -euo pipefail
+
+          kubectl --context=ci -n "$K8S_NAMESPACE" \
+            port-forward svc/registration 5000:5000 &
+          PF_PID=$!
+
+          trap 'kill "$PF_PID" 2>/dev/null || true' EXIT
+
+          for i in {1..30}; do
+            if curl --silent --fail http://localhost:5000/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
           BASE_URL=http://localhost:5000 ./scripts/smoke-test.sh
 
       - name: Roll back on failure
