@@ -1,6 +1,8 @@
+
 # Applied ONCE by a cluster admin (see docs/SETUP.md, section 6).
-# Creates a ServiceAccount that can only manage workloads inside the app namespace,
-# so the GitHub secret never contains cluster-admin credentials.
+# Allows GitHub Actions to manage workloads and inspect events
+# only inside the cloud-native-app namespace.
+
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -16,15 +18,23 @@ rules:
   - apiGroups: ["apps"]
     resources: ["deployments", "replicasets"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]
+
   - apiGroups: [""]
     resources: ["services"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]
+
   - apiGroups: [""]
     resources: ["pods", "pods/log"]
     verbs: ["get", "list", "watch"]
+
   - apiGroups: [""]
     resources: ["pods/portforward"]
     verbs: ["create"]
+
+  # Read-only access for rollout troubleshooting
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -40,7 +50,8 @@ roleRef:
   name: github-actions-deployer
   apiGroup: rbac.authorization.k8s.io
 ---
-# Long-lived token for the ServiceAccount (Kubernetes >= 1.24 no longer auto-creates one)
+# Long-lived token for the ServiceAccount (Kubernetes >= 1.24
+# no longer auto-creates one automatically)
 apiVersion: v1
 kind: Secret
 metadata:

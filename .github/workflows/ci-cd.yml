@@ -186,7 +186,6 @@ jobs:
         env:
           K8S_NAMESPACE: cloud-native-app
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          IMAGE_TAG: sha-${{ github.sha }}
         run: |
           set -euo pipefail
 
