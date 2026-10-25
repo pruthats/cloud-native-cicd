@@ -119,10 +119,12 @@ jobs:
           kind load docker-image docker.io/local/registration-service:ci --name ci
 
       - name: Deploy manifests
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          IMAGE_TAG: sha-${{ github.sha }}
         run: |
-          kubectl apply -f k8s/namespace.yaml
           for f in k8s/course.yaml k8s/registration.yaml; do
-            envsubst '${DOCKERHUB_USERNAME} ${IMAGE_TAG}' < "$f" | kubectl apply -f -
+            envsubst '${DOCKERHUB_USERNAME} ${IMAGE_TAG}' < "$f" | kubectl apply -n cloud-native-app -f -
           done
 
       - name: Wait for rollout
