@@ -182,7 +182,7 @@ jobs:
           kubectl config current-context
 
       - name: Deploy Kubernetes manifests
-        shell: /bin/bash
+        shell: bash
         env:
           K8S_NAMESPACE: cloud-native-app
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
